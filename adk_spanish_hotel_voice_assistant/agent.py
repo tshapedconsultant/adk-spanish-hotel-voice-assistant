@@ -19,6 +19,7 @@ from .config import (
     HAS_GEMINI,
     INTENT_CLASSIFIER_MODEL,
     LLM_INTENT_OVERRIDE,
+    MAX_TEXT_CHARS,
     ROUTING_MODEL,
     USE_AMADEUS_HOTEL_TOOLS,
     USE_INTENT_FUNCTION_CALLING,
@@ -35,6 +36,7 @@ from .gemini_errors import (
     user_facing_gemini_error,
 )
 from .routing import RoutingService
+from .security import clamp_user_text
 from .sessions import RedisSessionStore, SessionManager, UserSession
 
 _BOOKING_RES = (
@@ -243,6 +245,7 @@ class GeminiAgent:
         self, user_input: str, session_id: Optional[str] = None
     ) -> Tuple[str, str]:
         """Return (assistant_reply, session_id) for the conversation turn."""
+        user_input = clamp_user_text(user_input, MAX_TEXT_CHARS)
         session = self._ensure_session(session_id)
         active_session_id = session.session_id
         session.add_message("user", user_input)

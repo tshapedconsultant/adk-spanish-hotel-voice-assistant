@@ -1,5 +1,9 @@
 """Process-wide composition: session store, agent, voice, and Flask app.
 
+Session storage uses ``SessionManager`` (thread-safe in-process lock) or Redis for
+multi-worker deployments. The Flask app is built via ``create_app`` with per-request
+``g`` handles — route handlers do not rely on mutable module-level agent references.
+
 Author: Andres Lage. Copyright (c) 2026 Andres Lage. MIT License — see LICENSE.
 """
 

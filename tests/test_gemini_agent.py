@@ -64,6 +64,35 @@ def test_gemini_agent_generates_response_and_keeps_context():
         callbacks_pkg.callbacks = original_callbacks
 
 
+def test_gemini_agent_clamps_oversized_user_input(monkeypatch):
+    import importlib
+
+    agent_module = importlib.import_module("adk_spanish_hotel_voice_assistant.agent")
+    monkeypatch.setattr(agent_module, "MAX_TEXT_CHARS", 10)
+
+    seen = {}
+
+    class StubChatSession:
+        def send_message(self, user_input, **_kwargs):
+            seen["text"] = user_input
+            return SimpleNamespace(text="ok")
+
+    class StubModel:
+        def start_chat(self, history):
+            return StubChatSession()
+
+    agent = assistant.GeminiAgent(
+        system_prompt="prompt",
+        api_key="fake-key",
+        model_factory=lambda: StubModel(),
+        structured_routing_enabled=False,
+        function_call_routing_enabled=False,
+    )
+    reply, _ = agent.generate("x" * 20)
+    assert reply == "ok"
+    assert seen["text"] == "x" * 10
+
+
 def test_llm_intent_classifier_enhances_detection():
     """Phrase chosen so keyword tier stays unknown and the LLM tier supplies intent."""
     responses = iter(["Respuesta genérica."])

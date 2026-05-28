@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import argparse
 from .config import GOOGLE_API_KEY, HOST, PORT, WEBHOOK_BASE
-from .runtime import AssistantApp
+from .runtime import AssistantApp, normalize_cli_mode
 from .server import run_production_server
 from .state import app as flask_app
 
@@ -17,7 +17,10 @@ def main() -> None:
         description="ADK Spanish Hotel Reservation Voice Assistant"
     )
     parser.add_argument(
-        "--mode", choices=["code", "voice"], default="code", help="Modo inicial"
+        "--mode",
+        choices=["text", "chat", "voice", "code"],
+        default="text",
+        help="Modo inicial: text/chat (CLI), voice (voz). 'code' está obsoleto (alias de text).",
     )
     parser.add_argument(
         "--serve-webhook",
@@ -49,5 +52,7 @@ def main() -> None:
         return
 
     app_instance = AssistantApp()
-    app_instance.set_mode(args.mode)
+    if args.mode == "code":
+        print("Aviso: --mode code está obsoleto; use --mode text.")
+    app_instance.set_mode(normalize_cli_mode(args.mode))
     app_instance.start()

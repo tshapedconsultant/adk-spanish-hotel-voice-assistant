@@ -96,7 +96,7 @@ PAGES = [
                 "Instalación: `pip install -r requirements.txt` y exportar `GOOGLE_API_KEY`. "
                 "Opcionalmente definir `HOTEL_BOOKING_API` y `HOTEL_API_TOKEN` para conectarse a un "
                 "PMS real. Ejecución básica: `python -m adk_spanish_hotel_voice_assistant --mode "
-                "voice` para kiosco o `--mode code` para agentes humanos. Servidor webhook: "
+                "voice` para kiosco o `--mode text` para agentes humanos (CLI). Servidor webhook: "
                 "`python -m adk_spanish_hotel_voice_assistant --serve-webhook --production` "
                 "despliega con Waitress en el puerto configurado."
             ),

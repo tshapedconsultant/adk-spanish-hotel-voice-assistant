@@ -41,8 +41,10 @@ from .config import (
 from .amadeus_client import amadeus_configured
 from .transcribe import transcribe_audio
 from .security import (
+    extract_session_api_key,
     extract_webhook_secret,
     is_valid_session_id,
+    validate_user_text_length,
     webhook_secret_matches,
 )
 from .throttler import SlidingWindowLimiter
@@ -258,11 +260,12 @@ def create_app(
             else "Hola, necesito ayuda con una reserva de hotel"
         )
 
-        if len(text) > MAX_TEXT_CHARS:
+        ok, err = validate_user_text_length(text, MAX_TEXT_CHARS)
+        if not ok:
             return (
                 jsonify(
                     {
-                        "error": f"Field 'text' exceeds {MAX_TEXT_CHARS} characters",
+                        "error": err,
                         "max_chars": MAX_TEXT_CHARS,
                     }
                 ),
@@ -341,11 +344,7 @@ def create_app(
             return jsonify({"error": "Invalid session_id format"}), 400
 
         if SESSION_API_KEY:
-            provided = (
-                request.headers.get("X-API-Key")
-                or request.headers.get("X-Api-Key")
-                or ""
-            ).strip()
+            provided = extract_session_api_key(request)
             if not webhook_secret_matches(SESSION_API_KEY, provided):
                 return jsonify({"error": "Unauthorized"}), 401
 

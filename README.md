@@ -65,8 +65,10 @@ Create a copy of `.env.example` named `.env` and fill in the values. The
 4. **Run the assistant in text (CLI) mode** (from the project root):
 
 ```bash
-python -m adk_spanish_hotel_voice_assistant --mode code
+python -m adk_spanish_hotel_voice_assistant --mode text
 ```
+
+(`--mode chat` is an alias; `--mode code` is deprecated but still accepted.)
 
 5. **Run the webhook server**:
 

@@ -14,6 +14,7 @@ from .config import (
     AMADEUS_API_HOST,
     AMADEUS_CLIENT_ID,
     AMADEUS_CLIENT_SECRET,
+    AMADEUS_REQUEST_TIMEOUT,
     logger,
 )
 
@@ -80,7 +81,7 @@ def amadeus_get(
         url,
         params=params,
         headers={"Authorization": f"Bearer {token}"},
-        timeout=25,
+        timeout=AMADEUS_REQUEST_TIMEOUT,
     )
     if resp.status_code == 401 and retry_on_401:
         token = get_access_token(force_refresh=True)
@@ -88,7 +89,7 @@ def amadeus_get(
             url,
             params=params,
             headers={"Authorization": f"Bearer {token}"},
-            timeout=25,
+            timeout=AMADEUS_REQUEST_TIMEOUT,
         )
     if resp.status_code >= 400:
         raise AmadeusError(f"Amadeus GET {path} ({resp.status_code}): {resp.text[:300]}")

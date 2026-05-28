@@ -15,6 +15,7 @@ import requests
 from . import callbacks as _callbacks_mod
 from .amadeus_client import amadeus_configured
 from .config import logger
+from .security import parse_guest_count
 
 
 @dataclass
@@ -48,7 +49,7 @@ def default_booking_handler(payload: Dict[str, Any]) -> Dict[str, Any]:
         check_out = str(_pick("check_out") or "")
         room_type = str(_pick("room_type") or "")
         guests_val = _pick("guests")
-        guests = int(guests_val if guests_val not in (None, "", 0) else 1) or 1
+        guests = parse_guest_count(guests_val, default=1)
 
         _reserved = {
             "guest_name",

@@ -8,7 +8,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Optional, Tuple
 
-from .config import HAS_GEMINI, genai, logger
+from .config import HAS_GEMINI, MAX_TEXT_CHARS, genai, logger
+from .security import clamp_user_text
 
 ROUTING_FUNCTION_NAME = "emit_turn_routing"
 
@@ -179,7 +180,8 @@ class RoutingService:
             )
 
     def route(self, user_input: str) -> Tuple[str, Dict[str, Any]]:
-        prompt = _ROUTING_PROMPT + user_input.strip()
+        bounded = clamp_user_text(user_input.strip(), MAX_TEXT_CHARS)
+        prompt = _ROUTING_PROMPT + bounded
         try:
             if self._use_function_call:
                 response = self._model.generate_content(prompt)

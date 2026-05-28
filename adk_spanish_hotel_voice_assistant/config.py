@@ -107,6 +107,8 @@ USE_AMADEUS_HOTEL_TOOLS = (
     os.getenv("USE_AMADEUS_HOTEL_TOOLS", "true").lower() == "true"
 )
 DEFAULT_HOTEL_CITY = os.getenv("DEFAULT_HOTEL_CITY", "Las Palmas")
+# Amadeus HTTP timeout (seconds). 401 retry doubles wall time; keep under typical proxy limits (~30s).
+AMADEUS_REQUEST_TIMEOUT = int(os.getenv("AMADEUS_REQUEST_TIMEOUT", "12"))
 
 SYSTEM_PROMPT_ES = """Eres un asistente virtual especializado en reservas de hotel para un sitio web español.
 Tu función es ayudar a los usuarios a reservar habitaciones de hotel de manera eficiente y amigable.

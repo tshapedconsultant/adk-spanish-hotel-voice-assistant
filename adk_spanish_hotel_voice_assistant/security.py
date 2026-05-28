@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+from typing import Any, Optional, Tuple
 
 from flask import Request
 
@@ -35,10 +36,64 @@ def extract_webhook_secret(request: Request) -> str:
     return ""
 
 
-def webhook_secret_matches(expected: str, provided: str) -> bool:
+def extract_session_api_key(request: Request) -> str:
+    """Read session inspection key from X-API-Key / X-Api-Key."""
+    for header in ("X-API-Key", "X-Api-Key"):
+        value = request.headers.get(header)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def clamp_user_text(text: str, max_chars: int) -> str:
+    """Truncate user text to mitigate context poisoning (ASI06)."""
+    if max_chars <= 0 or len(text) <= max_chars:
+        return text
+    return text[:max_chars]
+
+
+def validate_user_text_length(text: str, max_chars: int) -> Tuple[bool, str]:
+    """Return (ok, error_message) when text exceeds the configured limit."""
+    if len(text) > max_chars:
+        return False, f"Field 'text' exceeds {max_chars} characters"
+    return True, ""
+
+
+def parse_guest_count(value: Any, *, default: int = 1) -> int:
+    """Parse guest count safely; non-numeric values fall back to ``default``."""
+    if value is None or value == "" or value == 0:
+        return default
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value if value > 0 else default
+    if isinstance(value, float):
+        iv = int(value)
+        return iv if iv > 0 else default
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return default
+        if stripped.isdigit():
+            iv = int(stripped)
+            return iv if iv > 0 else default
+        try:
+            iv = int(float(stripped))
+            return iv if iv > 0 else default
+        except ValueError:
+            return default
+    return default
+
+
+def webhook_secret_matches(expected: str, provided: Optional[str]) -> bool:
     """Compare secrets via SHA-256 digests (constant-time; no length oracle on the raw key)."""
     if not expected:
         return True
+    if provided is None:
+        return False
+    provided_str = str(provided).strip()
+    if not provided_str:
+        return False
     he = hashlib.sha256(expected.encode("utf-8")).digest()
-    hp = hashlib.sha256(provided.encode("utf-8")).digest()
+    hp = hashlib.sha256(provided_str.encode("utf-8")).digest()
     return hmac.compare_digest(he, hp)

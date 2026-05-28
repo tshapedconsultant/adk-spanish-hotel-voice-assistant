@@ -8,12 +8,21 @@ from __future__ import annotations
 from .config import GEMINI_MODEL
 from . import state
 
+_VALID_MODES = frozenset({"text", "voice", "code", "chat"})
+
+
+def normalize_cli_mode(mode: str) -> str:
+    """Map legacy CLI aliases to the canonical mode names."""
+    if mode in ("code", "chat"):
+        return "text"
+    return mode
+
 
 class AssistantApp:
-    """Runtime that can switch between CLI (code) and voice modes."""
+    """Runtime that can switch between CLI (text) and voice modes."""
 
     def __init__(self):
-        self.mode = "code"
+        self.mode = "text"
         self.running = False
         self.agent = state.agent
         self.voice = state.voice_io
@@ -21,10 +30,10 @@ class AssistantApp:
         self.current_session_id = None
 
     def set_mode(self, mode: str) -> None:
-        if mode not in {"code", "voice"}:
-            raise ValueError("Mode must be 'code' or 'voice'")
-        self.mode = mode
-        if mode == "voice" and self.voice:
+        if mode not in _VALID_MODES:
+            raise ValueError("Mode must be 'text', 'chat', 'voice', or legacy 'code'")
+        self.mode = normalize_cli_mode(mode)
+        if self.mode == "voice" and self.voice:
             session = self.session_manager.create_session()
             self.current_session_id = session.session_id
             print(f"Sesión de voz iniciada: {self.current_session_id}")
@@ -37,13 +46,13 @@ class AssistantApp:
         print(f"Iniciando AssistantApp en modo {self.mode} con modelo {GEMINI_MODEL}")
         if self.mode == "voice" and not self.voice:
             print("Dependencias de voz no disponibles, cambiando a modo texto.")
-            self.mode = "code"
+            self.mode = "text"
         if self.mode == "voice":
             self._run_voice_loop()
         else:
-            self._run_code_loop()
+            self._run_text_loop()
 
-    def _run_code_loop(self) -> None:
+    def _run_text_loop(self) -> None:
         session = self.session_manager.create_session()
         self.current_session_id = session.session_id
         print("Sesión de texto iniciada. Escriba 'salir' para terminar.")

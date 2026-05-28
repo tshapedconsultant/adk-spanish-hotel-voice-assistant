@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Diagramas de arquitectura — Asistente de reservas hoteleras (voz/texto)" />
+  <title>Arquitectura · Asistente de reservas</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.min.js" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #0c1222;
+      --bg-elevated: #151d33;
+      --border: rgba(212, 168, 83, 0.22);
+      --accent: #d4a853;
+      --text: #e8edf7;
+      --text-muted: #94a3b8;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --radius: 14px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f1f5f9;
+        --bg-elevated: #ffffff;
+        --border: rgba(100, 116, 139, 0.35);
+        --accent: #b45309;
+        --text: #0f172a;
+        --text-muted: #64748b;
+      }
+      body {
+        background: radial-gradient(ellipse 120% 80% at 50% -20%, #e2e8f0 0%, var(--bg) 55%);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 2rem 1.5rem 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.75rem;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    section {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    section h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.15rem;
+    }
+
+    section p {
+      margin: 0 0 1rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .mermaid {
+      overflow-x: auto;
+      padding: 0.5rem 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem 1.5rem 2rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Arquitectura del asistente</h1>
+    <p class="subtitle">ADK Spanish Hotel Reservation Voice Assistant — Andres Lage © 2026</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Vista general de componentes</h2>
+      <p>Modos de ejecución (CLI/voz, webhook) y almacenamiento de sesión compartido por <code>GeminiAgent</code>.</p>
+      <pre class="mermaid">
+flowchart TB
+  subgraph clients["Clientes"]
+    CLI["CLI / AssistantApp<br/>modo code o voice"]
+    DEMO["Demo UI /demo/"]
+    EXT["Integraciones externas"]
+  end
+
+  subgraph runtime["Proceso Python"]
+    MAIN["main.py / server.py"]
+    APP["AssistantApp + VoiceIO"]
+    FLASK["Flask create_app"]
+    AGENT["GeminiAgent"]
+    ROUTE["RoutingService<br/>JSON schema o function calling"]
+    SESS["SessionManager<br/>memoria o Redis"]
+    CB["callbacks<br/>on_booking_request, on_intent"]
+  end
+
+  subgraph external["Externos"]
+    GEMINI["Google Gemini 3.5 Flash"]
+    PMS["API hotel / PMS<br/>HOTEL_BOOKING_API"]
+  end
+
+  CLI --> APP
+  APP --> AGENT
+  DEMO -->|POST /webhook/trigger| FLASK
+  EXT -->|POST webhooks| FLASK
+  MAIN --> FLASK
+  MAIN --> APP
+  FLASK --> AGENT
+  AGENT --> ROUTE
+  AGENT --> SESS
+  ROUTE --> GEMINI
+  AGENT --> GEMINI
+  AGENT --> CB
+  CB --> PMS
+      </pre>
+    </section>
+
+    <section>
+      <h2>Flujo webhook (demo e integraciones)</h2>
+      <p>Petición típica con <code>session_id</code> UUID v4, rate limit y clave opcional.</p>
+      <pre class="mermaid">
+sequenceDiagram
+  participant U as Cliente (demo / API)
+  participant F as Flask /webhook/trigger
+  participant L as Rate limiter
+  participant A as GeminiAgent
+  participant S as Session store
+  participant G as Gemini API
+  participant C as Callbacks
+
+  U->>F: POST JSON text, session_id?
+  F->>F: Validar WEBHOOK_API_KEY
+  F->>L: allow(remote_addr)
+  alt límite excedido
+    F-->>U: 429 Too many requests
+  end
+  F->>F: Validar tipos y MAX_TEXT_CHARS
+  F->>A: generate(text, session_id)
+  A->>S: cargar / crear sesión
+  A->>G: chat + routing (intención / entidades)
+  G-->>A: respuesta + routing
+  A->>S: persistir historial
+  opt intent booking_request
+    A->>C: on_booking_request(payload)
+    C-->>PMS: HTTP opcional
+  end
+  A-->>F: reply, session_id
+  F-->>U: 200 JSON
+      </pre>
+    </section>
+
+    <section>
+      <h2>Enrutamiento de intención por turno</h2>
+      <p>Structured routing por defecto; fallback por regex si el LLM de routing falla o está desactivado.</p>
+      <pre class="mermaid">
+flowchart LR
+  MSG["Mensaje usuario"]
+  MSG --> R{"USE_STRUCTURED_ROUTING<br/>o function calling?"}
+  R -->|sí| LLM["RoutingService → Gemini"]
+  R -->|no| KW["Regex keywords"]
+  LLM --> INT["intent + entidades<br/>nombre, fechas, huéspedes…"]
+  KW --> INT
+  INT --> ACT{"intent"}
+  ACT -->|booking_request| BK["on_booking_request"]
+  ACT -->|greeting / price / …| CB2["on_intent"]
+  ACT -->|unknown| CHAT["Respuesta conversacional"]
+  BK --> REPLY["Texto al usuario"]
+  CB2 --> REPLY
+  CHAT --> REPLY
+      </pre>
+    </section>
+  </main>
+
+  <footer>
+    Abrir con el servidor webhook: <a href="/docs/architecture">/docs/architecture</a>
+    · También como archivo local <code>docs/architecture.html</code>
+  </footer>
+
+  <script>
+    (function () {
+      var prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: prefersLight ? "default" : "dark",
+        securityLevel: "strict",
+        flowchart: { useMaxWidth: true, htmlLabels: true },
+        sequence: { useMaxWidth: true },
+      });
+    })();
+  </script>
+</body>
+</html>

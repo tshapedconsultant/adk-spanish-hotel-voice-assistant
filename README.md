@@ -7,7 +7,7 @@ ADK Spanish Hotel Reservation Voice Assistant
 This project provides a **Spanish-speaking hotel reservation assistant** that can run
 as a voice-first kiosk, a CLI/chatbot, and a small Flask-based webhook service.
 It is powered by **Google Gemini 3.5 Flash** (default: `gemini-3.5-flash`; set
-`GEMINI_MODEL=gemini-2.0-flash` in `.env` for a lower-cost alternative)
+`GEMINI_MODEL=gemini-2.5-flash-lite` in `.env` for a lower-cost alternative)
 and is designed for lightweight production deployments.
 
 Features
@@ -21,8 +21,8 @@ Features
 - Flask **application factory** (`create_app`) with dependencies on **`flask.g`** per request
   (no module-level agent references inside route handlers).
 - Webhook endpoints (`/webhook/trigger`, `/webhook/booking_event`, `/health`) and pluggable
-  booking callbacks; booking payloads include `current_reservation` and `extracted_entities`
-  when available.
+  booking callbacks; **`on_booking_request` runs only when required fields are complete and the
+  user explicitly confirms** (avoids simulated “ghost” reservations on vague intent).
 - **Web demo UI** at `/demo/` — chat layout optimized for **screen recording** (large type,
   high contrast, **light/dark** follows OS preference). Renders assistant replies as **Markdown**
   (via `marked` + `DOMPurify` in the browser), **textarea** with auto-resize, **typing indicator**,
@@ -38,7 +38,9 @@ Quick start
 
 ```bash
 pip install -r requirements.txt
-# optional: tests and scripts/generate_assistant_doc.py
+# webhook-only: stop here. For voice kiosk + Redis sessions:
+pip install -r requirements-voice.txt
+# tests and PDF doc generator:
 pip install -r requirements-dev.txt
 ```
 
@@ -95,6 +97,7 @@ This assistant is designed with **OWASP Top 10 for Agentic Applications (2026)**
 - **ASI03 (identity / privilege):** Optional **`WEBHOOK_API_KEY`** (`X-Webhook-Key` or
   `Authorization: Bearer`) for webhook POST routes; optional **`SESSION_API_KEY`** for session
   inspection; secrets compared with **SHA-256 + constant-time** `hmac.compare_digest`.
+  **Public deployments must set `WEBHOOK_API_KEY`** — without it, POST webhooks accept anonymous traffic by design.
 - **ASI05 (RCE):** No `eval` on user text; typed JSON fields; **`MAX_REQUEST_BYTES`** limits
   body size (Flask `MAX_CONTENT_LENGTH`).
 - **ASI07 / ASI08 / ASI09:** Use **HTTPS** in production; generic **5xx** payloads; external
@@ -150,6 +153,7 @@ Extending the assistant
 - Use the `/session/<session_id>` endpoint to inspect conversation metadata for
   audits or debugging (set `SESSION_API_KEY` in production and send `X-API-Key`).
 - Set `WEBHOOK_API_KEY` so only your frontends or integration layer can call webhook POST routes.
+  The built-in rate limiter is **per process** (Waitress threads share one limiter; multiple replicas multiply the effective quota unless you add a shared store).
 - Behind nginx/ingress set `TRUSTED_PROXY_HOPS=1` so **ProxyFix** rewrites `request.remote_addr` for rate limiting (`/health` reports `proxy_fix_active: true`).
 
 Repository layout

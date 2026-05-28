@@ -14,6 +14,10 @@ def test_resolve_city_iata_las_palmas():
     assert resolve_city_iata("Las Palmas") == "LPA"
 
 
+def test_resolve_city_iata_rejects_short_false_positives():
+    assert resolve_city_iata("san") is None
+
+
 @patch("adk_spanish_hotel_voice_assistant.hotel_search.amadeus_configured", return_value=False)
 def test_buscar_sin_credenciales(_mock_cfg):
     out = buscar_disponibilidad_hotel("Las Palmas", "2026-06-10", "2026-06-12")

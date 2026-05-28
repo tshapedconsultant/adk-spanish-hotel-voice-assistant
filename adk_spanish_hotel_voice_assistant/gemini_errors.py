@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from .config import GEMINI_20_FLASH, GEMINI_MODEL
+from .config import GEMINI_25_FLASH, GEMINI_25_FLASH_LITE, GEMINI_MODEL
 
 _QUOTA_RE = re.compile(r"\b429\b|quota|rate[- ]?limit|resourceexhausted", re.I)
 
@@ -22,8 +22,8 @@ def chat_model_fallbacks(primary: Optional[str] = None) -> List[str]:
     """Models to try for chat when the primary hits quota or errors."""
     ordered = [
         primary,
-        GEMINI_20_FLASH,
-        "gemini-2.5-flash",
+        GEMINI_25_FLASH,
+        GEMINI_25_FLASH_LITE,
         GEMINI_MODEL,
     ]
     seen: set[str] = set()
@@ -46,7 +46,7 @@ def user_facing_gemini_error(exc: Optional[BaseException]) -> str:
         return (
             "Límite de uso de la API de Gemini alcanzado (cuota gratuita). "
             "Espere un minuto y vuelva a intentar, o ponga en `.env`: "
-            "`GEMINI_MODEL=gemini-2.0-flash` y `ROUTING_MODEL=gemini-2.0-flash` "
+            "`GEMINI_MODEL=gemini-2.5-flash-lite` y `ROUTING_MODEL=gemini-2.5-flash-lite` "
             "para repartir las peticiones entre modelos."
         )
     return (

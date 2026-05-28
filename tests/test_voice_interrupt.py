@@ -10,11 +10,11 @@ from adk_spanish_hotel_voice_assistant import voice as voice_mod
 
 @patch.object(voice_mod, "HAS_TTS", True)
 @patch.object(voice_mod, "HAS_SR", True)
-@patch.object(voice_mod, "sr", MagicMock())
-@patch.object(voice_mod, "pyttsx3")
-def test_interrupt_stops_engine_and_drains_queue(mock_pyttsx3):
+@patch.object(voice_mod, "sr", MagicMock(), create=True)
+@patch.object(voice_mod, "pyttsx3", MagicMock(), create=True)
+def test_interrupt_stops_engine_and_drains_queue():
     engine = MagicMock()
-    mock_pyttsx3.init.return_value = engine
+    voice_mod.pyttsx3.init.return_value = engine
 
     vio = voice_mod.VoiceIO()
     vio._tts_queue.put("frase pendiente uno")

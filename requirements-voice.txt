@@ -1,0 +1,4 @@
+# Optional: Redis session store (horizontal scale) and local voice kiosk (mic + TTS).
+redis>=5.0.0
+speechrecognition
+pyttsx3

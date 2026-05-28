@@ -59,13 +59,24 @@ def resolve_city_iata(ciudad: str) -> Optional[str]:
     if not key:
         return None
     if len(key) == 3 and key.isalpha():
-        return key.upper()
+        upper = key.upper()
+        if upper in set(_CITY_TO_IATA.values()):
+            return upper
+        return None
     if key in _CITY_TO_IATA:
         return _CITY_TO_IATA[key]
+    # Whole-word / full-alias match only (avoid "san" → Tenerife/TCI false positives).
+    padded = f" {key} "
+    best_code: Optional[str] = None
+    best_len = 0
     for name, code in _CITY_TO_IATA.items():
-        if name in key or key in name:
-            return code
-    return None
+        if len(name) < 4:
+            continue
+        if key == name or f" {name} " in padded:
+            if len(name) > best_len:
+                best_code = code
+                best_len = len(name)
+    return best_code
 
 
 def normalize_date(value: str) -> Optional[str]:

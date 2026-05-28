@@ -15,6 +15,7 @@ from . import booking  # noqa: F401 - register default callbacks
 from .agent import GeminiAgent
 from .config import (
     GEMINI_20_FLASH,
+    GEMINI_25_FLASH,
     GEMINI_35_FLASH,
     GEMINI_MODEL,
     GOOGLE_API_KEY,
@@ -24,7 +25,7 @@ from .config import (
     logger,
 )
 from .sessions import create_session_store
-from .voice import VoiceIO, try_init_voice_io
+from .voice import VoiceIO
 from .web import create_app
 
 session_manager = create_session_store()
@@ -44,6 +45,7 @@ if GOOGLE_API_KEY:
                 "Consider a stable ID such as %s or %s for production.",
                 GEMINI_MODEL,
                 GEMINI_35_FLASH,
+                GEMINI_25_FLASH,
                 GEMINI_20_FLASH,
             )
         elif GEMINI_MODEL not in KNOWN_GEMINI_MODELS:
@@ -57,7 +59,7 @@ if GOOGLE_API_KEY:
 else:
     logger.warning("GOOGLE_API_KEY not configured.")
 
-voice_io: Optional[VoiceIO] = try_init_voice_io()
+voice_io: Optional[VoiceIO] = None
 
 app = create_app(
     agent=agent,

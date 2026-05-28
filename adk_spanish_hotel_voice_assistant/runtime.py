@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from .config import GEMINI_MODEL
 from . import state
+from .voice import try_init_voice_io
 
 _VALID_MODES = frozenset({"text", "voice", "code", "chat"})
 
@@ -25,18 +26,25 @@ class AssistantApp:
         self.mode = "text"
         self.running = False
         self.agent = state.agent
-        self.voice = state.voice_io
+        self.voice = None
         self.session_manager = state.session_manager
         self.current_session_id = None
+
+    def _ensure_voice(self):
+        if self.voice is None:
+            self.voice = try_init_voice_io()
+        return self.voice
 
     def set_mode(self, mode: str) -> None:
         if mode not in _VALID_MODES:
             raise ValueError("Mode must be 'text', 'chat', 'voice', or legacy 'code'")
         self.mode = normalize_cli_mode(mode)
-        if self.mode == "voice" and self.voice:
-            session = self.session_manager.create_session()
-            self.current_session_id = session.session_id
-            print(f"Sesión de voz iniciada: {self.current_session_id}")
+        if self.mode == "voice":
+            voice = self._ensure_voice()
+            if voice:
+                session = self.session_manager.create_session()
+                self.current_session_id = session.session_id
+                print(f"Sesión de voz iniciada: {self.current_session_id}")
 
     def start(self) -> None:
         if not self.agent:
@@ -44,7 +52,7 @@ class AssistantApp:
             return
         self.running = True
         print(f"Iniciando AssistantApp en modo {self.mode} con modelo {GEMINI_MODEL}")
-        if self.mode == "voice" and not self.voice:
+        if self.mode == "voice" and not self._ensure_voice():
             print("Dependencias de voz no disponibles, cambiando a modo texto.")
             self.mode = "text"
         if self.mode == "voice":
@@ -67,7 +75,7 @@ class AssistantApp:
             if user_input.lower() in {"quit", "exit", "salir"}:
                 self.running = False
                 break
-            if user_input.lower() == "cambiar" and self.voice:
+            if user_input.lower() == "cambiar" and self._ensure_voice():
                 self.set_mode("voice")
                 self._run_voice_loop()
                 return

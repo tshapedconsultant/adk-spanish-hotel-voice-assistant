@@ -46,12 +46,17 @@ def test_gemini_agent_generates_response_and_keeps_context():
         )
 
         captured = {}
+        booking_calls = []
 
         def fake_booking_callback(payload):
-            captured.update(payload)
+            booking_calls.append(payload)
             return {"status": "ok"}
 
+        def on_intent(payload):
+            captured.update(payload)
+
         callbacks_pkg.callbacks.on_booking_request = fake_booking_callback
+        callbacks_pkg.callbacks.on_intent = on_intent
 
         reply_1, sid1 = agent.generate("Hola", None)
         reply_2, sid2 = agent.generate("Quiero reservar una habitación", sid1)
@@ -60,6 +65,23 @@ def test_gemini_agent_generates_response_and_keeps_context():
         assert "Perfecto" in reply_2
         assert sid1 == sid2
         assert captured["detected_intent"] == "booking_request"
+        assert len(booking_calls) == 0
+
+        session = agent.session_manager.get_session(sid2)
+        session.current_reservation = {
+            "guest_name": "Ana Test",
+            "check_in": "2026-06-01",
+            "check_out": "2026-06-03",
+            "ciudad": "Madrid",
+        }
+        agent.session_manager.put_session(session)
+
+        responses = iter(["Reserva confirmada."])
+        agent._model_factory = lambda: StubModel(responses)
+        agent._model_instance = None
+
+        agent.generate("Confirmo la reserva", sid2)
+        assert len(booking_calls) == 1
     finally:
         callbacks_pkg.callbacks = original_callbacks
 

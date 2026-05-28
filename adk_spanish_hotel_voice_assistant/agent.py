@@ -29,6 +29,7 @@ from .config import (
 )
 from .hotel_search import buscar_disponibilidad_hotel, infer_ciudad_from_text
 from .hotel_tools import format_amadeus_context_for_prompt, run_chat_with_hotel_tools
+from .booking import should_invoke_booking_handler
 from .gemini_errors import (
     chat_model_fallbacks,
     extract_response_text,
@@ -404,12 +405,14 @@ class GeminiAgent:
 
         cb = _callbacks_mod.callbacks
         if intent == "booking_request" and cb.on_booking_request:
-            try:
-                booking_result = cb.on_booking_request(payload)
-                if isinstance(booking_result, dict):
-                    payload["booking_result"] = booking_result
-            except Exception as exc:  # pragma: no cover - hook failures
-                self._handle_error(exc)
+            invoke, _reason = should_invoke_booking_handler(payload)
+            if invoke:
+                try:
+                    booking_result = cb.on_booking_request(payload)
+                    if isinstance(booking_result, dict):
+                        payload["booking_result"] = booking_result
+                except Exception as exc:  # pragma: no cover - hook failures
+                    self._handle_error(exc)
 
         if cb.on_intent:
             try:

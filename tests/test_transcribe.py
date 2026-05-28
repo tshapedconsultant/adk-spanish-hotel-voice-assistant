@@ -12,9 +12,9 @@ from adk_spanish_hotel_voice_assistant.transcribe import (
 from adk_spanish_hotel_voice_assistant.web import create_app
 
 
-def test_transcribe_model_candidates_prefers_flash_20():
+def test_transcribe_model_candidates_prefers_flash_25_lite():
     models = transcribe_model_candidates("gemini-3.5-flash")
-    assert models[0] == "gemini-2.0-flash"
+    assert models[0] == "gemini-2.5-flash-lite"
     assert "gemini-3.5-flash" in models
 
 

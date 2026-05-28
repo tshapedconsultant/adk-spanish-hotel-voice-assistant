@@ -40,15 +40,18 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # Stable Gemini model IDs (see https://ai.google.dev/gemini-api/docs/models)
 GEMINI_35_FLASH = "gemini-3.5-flash"
+GEMINI_25_FLASH = "gemini-2.5-flash"
+GEMINI_25_FLASH_LITE = "gemini-2.5-flash-lite"
+# Deprecated 2026-06-01; kept for explicit overrides only — do not use as default.
 GEMINI_20_FLASH = "gemini-2.0-flash"
 
 KNOWN_GEMINI_MODELS: frozenset[str] = frozenset(
     {
         GEMINI_35_FLASH,
+        GEMINI_25_FLASH,
+        GEMINI_25_FLASH_LITE,
         GEMINI_20_FLASH,
         "gemini-2.0-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
         "gemini-3-flash-preview",
     }
 )
@@ -95,7 +98,7 @@ USE_INTENT_FUNCTION_CALLING = (
     os.getenv("USE_INTENT_FUNCTION_CALLING", "false").lower() == "true"
 )
 # Routing uses a separate model so chat + routing do not share one quota bucket.
-ROUTING_MODEL = os.getenv("ROUTING_MODEL", "").strip() or GEMINI_20_FLASH
+ROUTING_MODEL = os.getenv("ROUTING_MODEL", "").strip() or GEMINI_25_FLASH_LITE
 
 # Amadeus GDS (developers.amadeus.com) — precios y disponibilidad reales
 AMADEUS_CLIENT_ID = os.getenv("AMADEUS_CLIENT_ID", "").strip()

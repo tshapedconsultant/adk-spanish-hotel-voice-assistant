@@ -6,9 +6,10 @@ Author: Andres Lage. Copyright (c) 2026 Andres Lage. MIT License — see LICENSE
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 import requests
 
@@ -17,6 +18,16 @@ from .amadeus_client import amadeus_configured
 from .config import logger
 from .security import parse_guest_count
 
+_BOOKING_CONFIRM_RE = re.compile(
+    r"\b("
+    r"confirmo|confirma|sí,? confirmo|si,? confirmo|correcto|de acuerdo|"
+    r"procede|proceder|haz la reserva|realiza la reserva|reserva confirmada|"
+    r"adelante con la reserva|ok,? reserva"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_REQUIRED_BOOKING_FIELDS = ("guest_name", "check_in", "check_out", "ciudad")
 
 @dataclass
 class ReservationRequest:
@@ -29,11 +40,62 @@ class ReservationRequest:
     extras: Dict[str, Any] = field(default_factory=dict)
 
 
+def reservation_snapshot_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge ``current_reservation`` with top-level entity fields from the turn payload."""
+    cr = payload.get("current_reservation")
+    merged: Dict[str, Any] = dict(cr) if isinstance(cr, dict) else {}
+    entities = payload.get("extracted_entities")
+    if isinstance(entities, dict):
+        for key in ("guest_name", "check_in", "check_out", "room_type", "ciudad"):
+            value = entities.get(key)
+            if value is not None and str(value).strip():
+                merged[key] = str(value).strip()
+        guests = entities.get("guests")
+        if isinstance(guests, int) and guests > 0:
+            merged["guests"] = guests
+    return merged
+
+
+def reservation_missing_fields(reservation: Dict[str, Any]) -> List[str]:
+    missing: List[str] = []
+    for field_name in _REQUIRED_BOOKING_FIELDS:
+        if not str(reservation.get(field_name) or "").strip():
+            missing.append(field_name)
+    return missing
+
+
+def user_confirmed_booking(user_input: str) -> bool:
+    return bool(_BOOKING_CONFIRM_RE.search(user_input or ""))
+
+
+def should_invoke_booking_handler(payload: Dict[str, Any]) -> Tuple[bool, str]:
+    """Gate booking hooks until required fields exist and the user explicitly confirms."""
+    reservation = reservation_snapshot_from_payload(payload)
+    missing = reservation_missing_fields(reservation)
+    if missing:
+        return False, "incomplete:" + ",".join(missing)
+    if not user_confirmed_booking(str(payload.get("user_input") or "")):
+        return False, "awaiting_confirmation"
+    return True, "ready"
+
+
 def default_booking_handler(payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
-        cr = payload.get("current_reservation")
-        merged: Dict[str, Any] = dict(cr) if isinstance(cr, dict) else {}
+        ready, reason = should_invoke_booking_handler(payload)
+        if not ready:
+            reservation = reservation_snapshot_from_payload(payload)
+            return {
+                "status": "skipped",
+                "reason": reason,
+                "missing_fields": reservation_missing_fields(reservation),
+                "session_id": str(payload.get("session_id", "")),
+                "message": (
+                    "Reserva no ejecutada: faltan datos obligatorios o confirmación explícita "
+                    "del huésped."
+                ),
+            }
 
+        merged = reservation_snapshot_from_payload(payload)
         def _pick(*keys: str) -> Any:
             for k in keys:
                 v = payload.get(k)
@@ -123,7 +185,6 @@ def default_booking_handler(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "Sin HOTEL_BOOKING_API ni Amadeus: no ejecutar reserva simulada en producción"
             )
 
-        time.sleep(1)
         logger.info("Simulated booking created for session %s", reservation.session_id)
         return {
             "status": "success",

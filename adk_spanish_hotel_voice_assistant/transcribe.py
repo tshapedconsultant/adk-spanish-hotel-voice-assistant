@@ -10,7 +10,7 @@ import tempfile
 import time
 from typing import List, Optional
 
-from .config import GEMINI_20_FLASH, GEMINI_MODEL, HAS_GEMINI, genai, logger
+from .config import GEMINI_25_FLASH, GEMINI_25_FLASH_LITE, GEMINI_MODEL, HAS_GEMINI, genai, logger
 
 _ALLOWED_MIME = frozenset(
     {
@@ -54,8 +54,8 @@ def transcribe_model_candidates(preferred: Optional[str] = None) -> List[str]:
     """Models to try, most compatible first for short browser recordings."""
     ordered = [
         os.getenv("TRANSCRIBE_MODEL", "").strip() or None,
-        GEMINI_20_FLASH,
-        "gemini-2.5-flash",
+        GEMINI_25_FLASH_LITE,
+        GEMINI_25_FLASH,
         preferred,
         GEMINI_MODEL,
     ]

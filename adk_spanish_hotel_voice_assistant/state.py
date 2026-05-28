@@ -14,7 +14,6 @@ from typing import Optional
 from . import booking  # noqa: F401 - register default callbacks
 from .agent import GeminiAgent
 from .config import (
-    GEMINI_20_FLASH,
     GEMINI_25_FLASH,
     GEMINI_35_FLASH,
     GEMINI_MODEL,
@@ -46,7 +45,6 @@ if GOOGLE_API_KEY:
                 GEMINI_MODEL,
                 GEMINI_35_FLASH,
                 GEMINI_25_FLASH,
-                GEMINI_20_FLASH,
             )
         elif GEMINI_MODEL not in KNOWN_GEMINI_MODELS:
             logger.warning(

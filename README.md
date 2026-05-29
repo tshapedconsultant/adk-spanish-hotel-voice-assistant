@@ -2,7 +2,7 @@ ADK Spanish Hotel Reservation Voice Assistant
 ============================================
 
 **Author:** Andres Lage  
-**Copyright:** © 2026 Andres Lage (MIT License — see [LICENSE](LICENSE)).
+**Copyright:** © 2026 Andrés Lage (GNU GPL v3.0 — see [LICENSE](LICENSE)).
 
 This project provides a **Spanish-speaking hotel reservation assistant** that can run
 as a voice-first kiosk, a CLI/chatbot, and a small Flask-based webhook service.
@@ -182,5 +182,5 @@ Use a repository path **without spaces** on disk if you can (e.g. `booking-voice
 
 License
 -------
-Copyright (c) 2026 **Andres Lage**. This project is licensed under the [MIT License](LICENSE). Documentation in `docs/` may cite third-party standards (e.g. OWASP) under their respective licenses; see the PDF attribution section where applicable.
+Copyright © 2026 **Andrés Lage** ([tshapedconsultant](https://github.com/tshapedconsultant)). This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE); derivative works must be distributed under the same license with source available. Documentation in `docs/` may cite third-party standards (e.g. OWASP) under their respective licenses; see the PDF attribution section where applicable.
 
